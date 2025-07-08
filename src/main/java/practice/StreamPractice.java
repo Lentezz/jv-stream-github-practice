@@ -1,10 +1,10 @@
 package practice;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import model.Candidate;
@@ -12,6 +12,7 @@ import model.Cat;
 import model.Person;
 
 public class StreamPractice {
+    private static final CandidateValidator VALIDATOR = new CandidateValidator();
     /**
      * Given list of strings where each element contains 1+ numbers:
      * input = {"5,30,100", "0,22,7", ...}
@@ -19,15 +20,15 @@ public class StreamPractice {
      * If there is no needed data throw RuntimeException with message
      * "Can't get min value from list: < Here is our input 'numbers' >"
      */
+
     public int findMinEvenNumber(List<String> numbers) throws RuntimeException {
         return numbers
                 .stream()
                 .map(s -> s.split(","))
                 .flatMap(Arrays::stream)
                 .mapToInt(Integer::parseInt)
-                .boxed()
                 .filter(s -> s % 2 == 0)
-                .min(Integer::compare)
+                .min()
                 .orElseThrow(() ->
                         new RuntimeException("Can't get min value from list: " + numbers));
     }
@@ -38,16 +39,11 @@ public class StreamPractice {
      * But before that subtract 1 from each element on an odd position (having the odd index).
      */
     public Double getOddNumsAverage(List<Integer> numbers) {
-        List<Integer> modifiedList = new ArrayList<>(numbers);
-        IntStream.range(0, numbers.size())
-                .filter(i -> i % 2 != 0)
-                .forEach(i -> modifiedList.set(i, modifiedList.get(i) - 1));
-        return modifiedList.stream()
-                .filter(s -> s % 2 != 0)
-                .mapToDouble(s -> (double) s)
+        return IntStream.range(0, numbers.size())
+                .map(i -> (i % 2 != 0) ? numbers.get(i) - 1 : numbers.get(i))
+                .filter(n -> n % 2 != 0)
                 .average()
-                .orElseThrow(() ->
-                        new NoSuchElementException("Can't get min value from list"));
+                .orElseThrow(() -> new NoSuchElementException("Can't get min value from list"));
     }
 
     /**
@@ -63,8 +59,8 @@ public class StreamPractice {
                 .stream()
                 .filter(s -> s.getAge() >= fromAge
                         && s.getAge() <= toAge
-                        && s.getSex().equals(Person.Sex.MAN))
-                .collect(Collectors.toList());
+                        && s.getSex() == Person.Sex.MAN)
+                .toList();
     }
 
     /**
@@ -79,12 +75,13 @@ public class StreamPractice {
      */
     public List<Person> getWorkablePeople(int fromAge, int femaleToAge,
                                           int maleToAge, List<Person> peopleList) {
+        Predicate<Person> isEligible = person -> person.getAge() >= fromAge
+                && ((person.getSex() == Person.Sex.MAN && person.getAge() <= maleToAge)
+                || (person.getSex() == Person.Sex.WOMAN && person.getAge() <= femaleToAge));
         return peopleList
                 .stream()
-                .filter(s -> s.getAge() >= fromAge
-                        && ((s.getSex().equals(Person.Sex.MAN) && s.getAge() <= maleToAge)
-                        || (s.getSex().equals(Person.Sex.WOMAN) && s.getAge() <= femaleToAge)))
-                .collect(Collectors.toList());
+                .filter(isEligible)
+                .toList();
     }
 
     /**
@@ -117,7 +114,7 @@ public class StreamPractice {
     public List<String> validateCandidates(List<Candidate> candidates) {
         return candidates
                 .stream()
-                .filter(s -> new CandidateValidator().test(s))
+                .filter(VALIDATOR)
                 .map(Candidate::getName)
                 .sorted()
                 .collect(Collectors.toList());
